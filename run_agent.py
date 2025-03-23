@@ -1,7 +1,8 @@
 from argparse import ArgumentParser
 import pickle
 
-import aicrowd_gym
+#import aicrowd_gym
+import gym as aicrowd_gym
 import minerl
 
 from openai_vpt.agent import MineRLAgent

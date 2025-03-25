@@ -12,7 +12,21 @@ import os
 import datetime
 import logging
 
-logging.basicConfig(level=logging.INFO)
+# Configure base logging
+
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    handlers=[
+        console # Always log to console
+    ]
+)
+
+log_dir = "logs"
+os.makedirs(log_dir, exist_ok=True)
+
 
 def main(model, weights, env, n_episodes=3, max_steps=int(1e9), show=False, video=False, video_dir="videos"):
     # Using aicrowd_gym is important! Your submission will not work otherwise
@@ -26,22 +40,34 @@ def main(model, weights, env, n_episodes=3, max_steps=int(1e9), show=False, vide
 
     logging.info(f"Running agent on {env.spec.id} for {n_episodes} episodes.")
     run_title = f"{env.spec.id}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}" 
-    run_dir = os.path.join(video_dir, run_title)
+    vid_run_dir = os.path.join(video_dir, run_title)
+    log_run_dir = os.path.join(log_dir, run_title)
+    os.makedirs(log_run_dir, exist_ok=True)
+
     
     for _ in range(n_episodes):
         obs = env.reset()
         if video:
-            os.makedirs(run_dir, exist_ok=True)
+            os.makedirs(vid_run_dir, exist_ok=True)
             # Specify subfolder with date and time
-            video_path = os.path.join(run_dir, f"{env.spec.id}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.mp4")
+            video_path = os.path.join(vid_run_dir, f"{env.spec.id}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.mp4")
             recorder = videoio.VideoWriter(video_path, resolution=(640, 360), fps=20)
             recorder.write(obs["pov"])
+        
+        log_run_path = os.path.join(log_run_dir, f"{run_title}.log")
+        file_handler = logging.FileHandler(log_run_path)
+        file_handler.setLevel(logging.DEBUG)
+        logging.getLogger().addHandler(file_handler)
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        file_handler.setFormatter(formatter)
+        logging.info(f"Starting run.")
 
         for step in range(max_steps):
             action = agent.get_action(obs)
             # ESC is not part of the predictions model.
             # For baselines, we just set it to zero.
             # We leave proper execution as an exercise for the participants :)
+            logging.debug(f"Step {step}: {action}")
             action.setdefault("ESC", 0)  # Ensure ESC is present        
 
             if action.get('ESC'):
@@ -62,6 +88,8 @@ def main(model, weights, env, n_episodes=3, max_steps=int(1e9), show=False, vide
         logging.info(f"Finished run.") 
         if video:
             recorder.close()
+        logging.getLogger().removeHandler(file_handler)
+        file_handler.close()
     env.close()
 
 

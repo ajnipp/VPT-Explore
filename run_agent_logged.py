@@ -25,13 +25,15 @@ def main(model, weights, env, n_episodes=3, max_steps=int(1e9), show=False, vide
     agent.load_weights(weights)
 
     logging.info(f"Running agent on {env.spec.id} for {n_episodes} episodes.")
+    run_title = f"{env.spec.id}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}" 
+    run_dir = os.path.join(video_dir, run_title)
     
     for _ in range(n_episodes):
         obs = env.reset()
         if video:
-            os.makedirs(video_dir, exist_ok=True)
+            os.makedirs(run_dir, exist_ok=True)
             # Specify subfolder with date and time
-            video_path = os.path.join(video_dir, f"{env.spec.id}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.mp4")
+            video_path = os.path.join(run_dir, f"{env.spec.id}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.mp4")
             recorder = videoio.VideoWriter(video_path, resolution=(640, 360), fps=20)
             recorder.write(obs["pov"])
 
@@ -40,7 +42,15 @@ def main(model, weights, env, n_episodes=3, max_steps=int(1e9), show=False, vide
             # ESC is not part of the predictions model.
             # For baselines, we just set it to zero.
             # We leave proper execution as an exercise for the participants :)
-            action["ESC"] = 0
+            action.setdefault("ESC", 0)  # Ensure ESC is present        
+
+            if action.get('ESC'):
+                # Agent has taken escape action
+                logging.info(f'Value of ESC is {action["ESC"]}, escaping at step {step}!')
+                break
+            
+            
+            # If model isn't escaping, perform a step
             obs, _, done, _ = env.step(action)
             if video:
                 recorder.write(obs["pov"])

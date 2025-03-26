@@ -126,3 +126,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# specific dirs
+videos/
+clone/
+pip-env/
+data/
